@@ -12,7 +12,7 @@ from pixelblaze import Pixelblaze
 
 class Automap:
     def __init__(self):
-        self.ip = "192.168.1.18"  # IP address of Pixelblaze
+        self.ip = "192.168.1.44"  # IP address of Pixelblaze
         self.outFileName = "map.json"  # name of output map file
 
         # set to True to see extra debug windows and output
@@ -22,8 +22,8 @@ class Automap:
         self.pixelCount = 0
         self.pixelblaze_wait = 0.01
         self.thresholdPct = 0.60
-        self.thresholdAdjustDelta = 0.05
-        self.maxRetries = 6
+        self.thresholdAdjustDelta = 0.025
+        self.maxRetries = 10
         self.framesToSkip = 5
 
         # Camera parameters - note, though most cameras can do higher resolutions,
@@ -153,14 +153,7 @@ class Automap:
         # this will save us from potential camera timing errors
         if lightPixel:
             self.light_pixel(pixel)
-
-        self.get_frame(self.grayscale)
-
-        # Attenuate the background by subtracting the captured background frame.
-        # This step cleans up ambient lighting and gets rid of quite a lot of other
-        # noise, as well as making it possible to ignore other permanently lit LEDs, like
-        # the power indicator on the Pixelblaze itself.
-        cv2.absdiff(self.background, self.grayscale, dst=self.diff)
+            self.get_frame(self.grayscale)
 
     def circle_led_centers(self, led_centers):
         for (x, y) in led_centers:
@@ -203,8 +196,10 @@ class Automap:
         """
         new_centers = []
         for led in led_centers:
-            # ignore any LEDs that we weren't able to see
+            # flag any LEDs that we weren't able to find
+            # so the user can hand-edit them later.
             if led[0] < 0 and led[1] < 0:
+                new_centers.append([-1, -1])
                 continue
 
             x = led[0] - x_center
@@ -229,6 +224,7 @@ class Automap:
 
         led_centers = []
         pixel = 0
+        missed_count = 0
 
         # We use these values to filter contours based on area
         min_area = 200
@@ -245,14 +241,18 @@ class Automap:
                 led_centers.append((-1, -1))
                 pixel += 1
                 retry = 0
+                missed_count += 1
 
-            # capture a frame to use for background subtraction
-            # we do this for every new pixel to allow for changes in lighting
             if retry == 0:
                 self.get_background_frame()
+                # capture a frame with (hopefully) a lit LED and process it
+                self.get_lit_led_frame(pixel)
 
-            # capture a frame with (hopefully) a lit LED and process it
-            self.get_lit_led_frame(pixel, retry == 0)
+            # Attenuate the background by subtracting the captured background frame.
+            # This step cleans up ambient lighting and gets rid of quite a lot of other
+            # noise, as well as making it possible to ignore other permanently lit LEDs, like
+            # the power indicator on the Pixelblaze itself.
+            cv2.absdiff(self.background, self.grayscale, dst=self.diff)
 
             # Threshold the image to isolate the LED
             # TODO - need to build a custom adaptive thresholding function for this.  The functions
@@ -272,13 +272,6 @@ class Automap:
             if len(contours) != 0:
                 largest_contour = max(contours, key=cv2.contourArea)
                 area = cv2.contourArea(largest_contour)
-
-                # find aspect ratio of largest contour
-                x, y, w, h = cv2.boundingRect(largest_contour)
-                x = min(w, h)
-                y = max(w, h)
-                aspect_ratio = float(x) / float(y)
-                self.debug_print("Aspect ratio: ", aspect_ratio)
 
                 if area < min_area:
                     # if the contour is too small, we'll try again with a different threshold
@@ -303,7 +296,7 @@ class Automap:
 
                     # we're looking for a roughly circular region, which means an aspect ratio
                     # of about 1.  If the box is long and skinny, we adjust the threshold and try again.
-                    if aspect_ratio < 0.6:
+                    if aspect_ratio < 0.5:
                         self.thresholdPct += self.thresholdAdjustDelta
                         self.debug_print("Aspect ratio too low. Adjusting threshold to ", self.thresholdPct)
                         retry += 1
@@ -326,7 +319,6 @@ class Automap:
             # debug: display working images in their windows
             if self.debug:
                 cv2.imshow("Threshold", self.threshold)
-                cv2.imshow("Gray", self.grayscale)
                 cv2.imshow("Diff", self.diff)
 
             # if we've located a pixel center, move on to the next one
@@ -386,6 +378,8 @@ class Automap:
             f.write(str(new_centers))
 
         print("Saved map with %d LEDs to %s" % (len(new_centers), self.outFileName))
+        if missed_count > 0:
+            print("(Couldn't find %d LEDs - tagged with coordinates [-1, -1] in map.)" % missed_count)
 
         # Turn off all LEDs on the Pixelblaze before we exit
         self.all_pixels_off()

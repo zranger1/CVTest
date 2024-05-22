@@ -229,7 +229,7 @@ class Automap:
             # debug: display working images in their windows
             if self.debug:
                 cv2.imshow("Threshold", self.threshold)
-                cv2.imshow("Gray", self.grayscale)
+                cv2.imshow("Background", self.background)
                 cv2.imshow("Diff", self.diff)
 
             # if we don't find anything that looks like an LED, we'll try again
