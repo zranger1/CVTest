@@ -17,7 +17,7 @@ class Automap:
         self.outFileName = "map.json"  # name of output map file
 
         # set to True to see extra debug windows and output
-        self.debug = True
+        self.debug = False
 
         self.pb = None
         self.pixelCount = 0
