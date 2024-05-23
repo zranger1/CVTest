@@ -4,6 +4,7 @@ import os
 
 os.environ["OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS"] = "0"
 
+import sys
 import time
 import cv2
 import numpy as np
@@ -11,8 +12,8 @@ from pixelblaze import Pixelblaze
 
 
 class Automap:
-    def __init__(self):
-        self.ip = "192.168.1.44"  # IP address of Pixelblaze
+    def __init__(self, ip):
+        self.ip = ip  # IP address of Pixelblaze
         self.outFileName = "map.json"  # name of output map file
 
         # set to True to see extra debug windows and output
@@ -393,7 +394,15 @@ class Automap:
 if __name__ == '__main__':
     print("Automap CV Research Version v0.1.0")
     print("Copyright (c) 2024 by ZRanger1. All rights reserved.")
+
+    ip = sys.argv[1]
+    if ip is None:
+        print("Usage: python Automap.py <Pixelblaze IP Address>")
+        print("  For example: python Automap.py 192.168.1.42")
+        exit(1)
+
     print("Note: Camera initialization may take up to a minute. Please be patient.")
     print("The camera calibration window will appear when initialization is complete.")
-    am = Automap()
+        
+    am = Automap(ip)
     am.main()
