@@ -61,7 +61,6 @@ class Automap:
         self.threshold = np.zeros((self.ySize, self.xSize), np.uint8)
         self.diff = np.zeros((self.ySize, self.xSize), np.uint8)
 
-    # write a function to print a variable length argument list if self.debug is True
     def debug_print(self, *args):
         if self.debug:
             print(*args)
