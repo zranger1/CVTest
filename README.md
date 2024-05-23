@@ -30,7 +30,7 @@ You'll also want to install the Automap.epe pattern (included in the Pixelblaze 
 
 To Run:
 - be sure your Pixelblaze is on, with the Automap pattern running
-- run the script: ```python Automap.py <Pixelblaze IP Address>```
+- run the script: ```python CVTest.py <Pixelblaze IP Address>```
 - follow the instructions on screen.
 - in CVTest.py, set ```self.debug = True``` (around line 20 ) to see additional diagnostic windows and debug output.
 
